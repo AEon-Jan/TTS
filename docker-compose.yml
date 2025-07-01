@@ -1,0 +1,56 @@
+version: '3.8'
+services:
+  redis:
+    image: redis:7
+    restart: always
+    volumes:
+      - redis-data:/data
+    ports:
+      - "6379:6379"
+  minio:
+    image: minio/minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minio
+      MINIO_ROOT_PASSWORD: minio123
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio-data:/data
+  gateway:
+    build: ./gateway
+    environment:
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+    ports:
+      - "8000:8000"
+    depends_on:
+      - redis
+  stt-client:
+    build: ./stt-client
+    environment:
+      REDIS_HOST: redis
+    depends_on:
+      - redis
+  llm-worker:
+    build: ./llm-worker
+    environment:
+      REDIS_HOST: redis
+    depends_on:
+      - redis
+  tts-worker:
+    build: ./tts-worker
+    environment:
+      REDIS_HOST: redis
+    depends_on:
+      - redis
+  panel:
+    build: ./panel
+    ports:
+      - "3000:3000"
+    depends_on:
+      - gateway
+volumes:
+  minio-data:
+  redis-data:
